@@ -72,6 +72,11 @@ bool mainViewSelectedIsHeader = false;
 bool mainViewCanScrollDown = false, mainViewCanScrollUp = false, mainViewCanMoveDown = false, mainViewCanMoveUp = false;
 int mainViewContentStart = 2, mainViewContentEnd;
 int mainViewHeaderAdditionalSpacing = 2;
+// file view
+int fileViewScrollOffset = 0;
+int fileViewStart = 1;
+int fileViewEnd;
+int fileViewMarginLeft = 2;
 // input
 int cursorPosX = 2, cursorPosY;
 std::string input = "";
@@ -422,6 +427,7 @@ void init()
     mainViewHeight = LINES - 3;
     mainViewContentEnd = mainViewHeight - 1;
     cursorPosY = LINES - 1;
+    fileViewEnd = LINES - 2;
 }
 
 void drawInputContent()
@@ -532,6 +538,30 @@ void signal_callback_handler(int signum)
     }
 }
 
+void viewFile()
+{
+    clear();
+    attron(A_STANDOUT);
+    mvaddstr(0, 0, std::string(COLS, ' ').c_str());
+    mvaddstr(0, 0, "File Contents:");
+    attroff(A_STANDOUT);
+    std::ifstream file(getSelectedFile().c_str());
+    //std::string content( (std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()    ) );
+    //mvaddstr(1-fileViewScrollOffset, 0, content.c_str());
+    std::string line;
+    int index = fileViewStart;
+    int lineNumber = 0;
+    while (std::getline(file, line))
+    {
+        lineNumber++;
+        if (index - fileViewScrollOffset >= fileViewStart && index - fileViewScrollOffset < fileViewEnd)
+            mvaddstr(index - fileViewScrollOffset, 0, (std::to_string(lineNumber) + std::string(fileViewMarginLeft, ' ') + line).c_str());
+        index++;
+    }
+    mvaddstr(LINES - 1, 0, "Continue [ENTER]");
+    isShowingOutput = true;
+}
+
 int main(void)
 {
     signal(SIGINT, signal_callback_handler);
@@ -581,8 +611,14 @@ int main(void)
                 {
                     // close output view
                     refresh();
+                    mvaddstr(0, treeViewWidth, std::string(COLS - treeViewWidth, ' ').c_str());
                     mvaddstr(LINES - 1, 0, std::string(COLS, ' ').c_str());
+                    std::string title = currentPath.filename();
+                    mvprintw(0, (COLS - title.size()) / 2, title.c_str());
+                    initTreeView();
+                    resetAndRefreshMainView();
                     isShowingOutput = false;
+                    fileViewScrollOffset = 0;
                 }
                 else if (!isTyping)
                     enterSelectedDirectory();
@@ -590,11 +626,6 @@ int main(void)
                     clearCommandContent();
                 else if (isTyping && currentInputType == COMMAND)
                 {
-                    /**clear();
-                    attron(A_STANDOUT);
-                    mvaddstr(0, 0, std::string(COLS, ' ').c_str());
-                    mvaddstr(0, 0, "OUTPUT:");
-                    attroff(A_STANDOUT);*/
                     isShowingOutput = true;
                     exec(("cd " + currentPath.string() + " && " + input).c_str());
                     isTyping = false;
@@ -625,13 +656,21 @@ int main(void)
                 }
                 break;
             case KEY_DOWN:
-                if (isShowingOutput) break;
+                if (isShowingOutput) {
+                    fileViewScrollOffset++;
+                    viewFile();
+                    break;
+                }
                 if (mainViewCanMoveDown)
                     mainViewScrollIndex++;
                 resetAndRefreshMainView();
                 break;
             case KEY_UP:
-                if (isShowingOutput) break;
+                if (isShowingOutput) {
+                    fileViewScrollOffset--;
+                    viewFile();
+                    break;
+                }
                 if (mainViewCanMoveUp)
                     mainViewScrollIndex--;
                 resetAndRefreshMainView();
@@ -659,7 +698,8 @@ int main(void)
             case KEY_F(funOptionsBarViewSelected):
                 if (optionsBarType == BARTYPE_FILE)
                 {
-                    clear();
+                    viewFile();
+                    /**clear();
                     attron(A_STANDOUT);
                     mvaddstr(0, 0, std::string(COLS, ' ').c_str());
                     mvaddstr(0, 0, "File Contents:");
@@ -669,7 +709,7 @@ int main(void)
                        (std::istreambuf_iterator<char>()    ) );
                     mvaddstr(1, 0, content.c_str());
                     mvaddstr(LINES - 1, 0, "Continue [ENTER]");
-                    isShowingOutput = true;
+                    isShowingOutput = true;*/
                 }
                 break;
             // command typing
