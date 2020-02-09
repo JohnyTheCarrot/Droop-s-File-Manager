@@ -77,6 +77,7 @@ int fileViewScrollOffset = 0;
 int fileViewStart = 1;
 int fileViewEnd;
 int fileViewMarginLeft = 2;
+bool isViewingFile = false;
 // input
 int cursorPosX = 2, cursorPosY;
 std::string input = "";
@@ -366,6 +367,7 @@ void enterSelectedDirectory()
 
 void initTreeView()
 {
+    move(0,0);
     treeView = newwin(treeViewHeight, treeViewWidth, 0, 0);
     box(treeView, 0, 0);
     keypad(stdscr, TRUE);
@@ -560,6 +562,7 @@ void viewFile()
     }
     mvaddstr(LINES - 1, 0, "Continue [ENTER]");
     isShowingOutput = true;
+    isViewingFile = true;
 }
 
 int main(void)
@@ -580,6 +583,12 @@ int main(void)
         {
             case KEY_RESIZE:
                 init();
+                refresh();
+                if (isViewingFile) 
+                {
+                    viewFile();
+                    break;
+                }
                 initTreeView();
                 resetAndRefreshMainView();
                 break;
@@ -618,6 +627,7 @@ int main(void)
                     initTreeView();
                     resetAndRefreshMainView();
                     isShowingOutput = false;
+                    isViewingFile = false;
                     fileViewScrollOffset = 0;
                 }
                 else if (!isTyping)
